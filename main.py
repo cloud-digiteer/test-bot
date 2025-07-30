@@ -11,6 +11,8 @@ app = FastAPI()
 
 VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN", "myverifytoken")
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
+DX_API_SEND_MESSAGE = os.getenv("DX_API_SEND_MESSAGE")
+
 FB_MESSENGER_API = "https://graph.facebook.com/v18.0/me/messages"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -44,20 +46,38 @@ async def handle_messages(request: Request):
                     message_text = messaging_event["message"].get("text")
                     logger.info(f"Message from {sender_id}: {message_text}")
 
+                    # 1. Send message_text to DX_API_SEND_MESSAGE
+                    if message_text:
+                        try:
+                            dx_response = requests.post(
+                                DX_API_SEND_MESSAGE,
+                                json={"sender_id": sender_id, "message": message_text},
+                                timeout=5
+                            )
+                            dx_response.raise_for_status()
+                            logger.info(f"Sent message to DX API: {dx_response.status_code}")
+                        except requests.RequestException as e:
+                            logger.error(f"Failed to send message to DX API: {e}")
+
+                    # 2. Auto-reply to user if message is "hello"
                     if message_text and message_text.lower() == "hello":
                         send_payload = {
                             "recipient": {"id": sender_id},
-                            "message": {"text": "How may I help youasdsadsadadasdsaasd?"},
+                            "message": {"text": "How may I help you?"},  # cleaned text
                         }
                         headers = {
                             "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}",
                             "Content-Type": "application/json"
                         }
+
                         try:
                             response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
                             response.raise_for_status()
                             logger.info(f"Sent reply to {sender_id}")
                         except requests.RequestException as e:
-                            logger.info(f"Error sending message: {e}")
+                            logger.error(f"Error sending message: {e}")
+
+    return {"status": "ok"}
+
 
     return {"status": "ok"}
