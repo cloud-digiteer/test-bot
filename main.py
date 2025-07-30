@@ -48,10 +48,17 @@ async def handle_messages(request: Request):
 
                     # 1. Send message_text to DX_API_SEND_MESSAGE
                     if message_text:
+                        
+                        dx_payload = {
+                            "chat_id": 1,
+                            "user_message": message_text,
+                            "file_ids": [],
+                            "file_urls": []
+                        }
                         try:
                             dx_response = requests.post(
                                 DX_API_SEND_MESSAGE,
-                                json={"sender_id": sender_id, "message": message_text},
+                                json=dx_payload,
                                 timeout=5
                             )
                             dx_response.raise_for_status()
