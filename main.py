@@ -3,6 +3,7 @@ from fastapi.responses import PlainTextResponse
 import os
 from dotenv import load_dotenv
 import requests
+import logging 
 
 load_dotenv()
 
@@ -11,6 +12,9 @@ app = FastAPI()
 VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN", "myverifytoken")
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
 FB_MESSENGER_API = "https://graph.facebook.com/v18.0/me/messages"
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+logger = logging.getLogger(__name__)
 
 @app.get("/")
 def root():
@@ -24,7 +28,7 @@ async def verify(request: Request):
     challenge = params.get("hub.challenge")
 
     if mode == "subscribe" and token == VERIFY_TOKEN:
-        print("[Webhook Verified]")
+        logger.info("[Webhook Verified]")
         return PlainTextResponse(content=challenge, status_code=200)
     else:
         return PlainTextResponse("Forbidden", status_code=403)
@@ -38,7 +42,7 @@ async def handle_messages(request: Request):
                 if "message" in messaging_event:
                     sender_id = messaging_event["sender"]["id"]
                     message_text = messaging_event["message"].get("text")
-                    print(f"Message from {sender_id}: {message_text}")
+                    logger.info(f"Message from {sender_id}: {message_text}")
 
                     if message_text and message_text.lower() == "hello":
                         send_payload = {
@@ -52,8 +56,8 @@ async def handle_messages(request: Request):
                         try:
                             response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
                             response.raise_for_status()
-                            print(f"Sent reply to {sender_id}")
+                            logger.info(f"Sent reply to {sender_id}")
                         except requests.RequestException as e:
-                            print(f"Error sending message: {e}")
+                            logger.info(f"Error sending message: {e}")
 
     return {"status": "ok"}
