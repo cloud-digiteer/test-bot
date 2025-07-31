@@ -97,6 +97,7 @@ async def receive_dx_result(request: Request):
             }
 
             logger.info("Before sending AI reply")
+            logger.info(f"Payload to Facebook Messenger: {send_payload}")
             response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
             response.raise_for_status()
             logger.info(f"Sent AI reply to {sender_id}")
@@ -107,6 +108,8 @@ async def receive_dx_result(request: Request):
 
         return {"status": "received"}
 
-    except Exception as e:
-        logger.error(f"ERROR PROCESSING RECEIVING DX RESULT: {e}")
-        return {"status": "error", "message": str(e)}
+    except requests.RequestException as e:
+        logger.error(f"Failed sending AI reply: {e}")
+        if e.response is not None:
+            logger.error(f"Facebook status code: {e.response.status_code}")
+            logger.error(f"Facebook response: {e.response.text}")
