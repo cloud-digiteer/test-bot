@@ -34,6 +34,17 @@ async def verify(request: Request):
         return PlainTextResponse(content=challenge, status_code=200)
     else:
         return PlainTextResponse("Forbidden", status_code=403)
+    
+@app.post("dx-result")
+async def receive_dx_result(request: Request):
+    try:
+        data = await request.json()
+        logger.info(f"[DX RESULT] Received: {data}")
+        return {"status": "received"}
+    
+    except Exception as e:
+        logger.error(f"ERROR PROCESSING RECEIVING DX RESULT")
+        return {"status": "error", "message": str(e)}
 
 @app.post("/webhook")
 async def handle_messages(request: Request):
@@ -83,8 +94,5 @@ async def handle_messages(request: Request):
                             logger.info(f"Sent reply to {sender_id}")
                         except requests.RequestException as e:
                             logger.error(f"Error sending message: {e}")
-
-    return {"status": "ok"}
-
 
     return {"status": "ok"}
