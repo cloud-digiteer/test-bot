@@ -78,6 +78,7 @@ async def handle_messages(request: Request):
                             logger.info(f"Sent message to DX API: {dx_response.status_code}")
 
                             ai_data = dx_response.json()
+                            logger.info(f"AI DATA: {ai_data}")
                             ai_response = ai_data.get("ai_response")
                             
                             send_payload = {
