@@ -35,7 +35,7 @@ async def verify(request: Request):
     else:
         return PlainTextResponse("Forbidden", status_code=403)
     
-@app.post("dx-result")
+@app.post("/dx-result")
 async def receive_dx_result(request: Request):
     try:
         data = await request.json()
