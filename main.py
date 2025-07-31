@@ -96,9 +96,12 @@ async def receive_dx_result(request: Request):
                 "Content-Type": "application/json"
             }
 
+            logger.info("Before sending AI reply")
             response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
             response.raise_for_status()
             logger.info(f"Sent AI reply to {sender_id}")
+            logger.info("After sending AI reply")
+
         else:
             logger.warning(f"Sender ID not found for chat_id: {chat_id} or missing ai_response")
 
