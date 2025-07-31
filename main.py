@@ -64,7 +64,8 @@ async def handle_messages(request: Request):
                             "chat_id": 1,
                             "user_message": message_text,
                             "file_ids": [],
-                            "file_urls": []
+                            "file_urls": [],
+                            "callback_type": "messenger"
                         }
                         try:
                             dx_response = requests.post(
