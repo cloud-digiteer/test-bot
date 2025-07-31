@@ -52,7 +52,7 @@ async def handle_messages(request: Request):
 
                     if message_text:
                         # Store sender_id for callback
-                          # Replace with dynamic chat_id or task_id if needed
+                        sender_map[1] = sender_id  # Replace with dynamic chat_id or task_id if needed
 
                         # Send message to DX API
                         dx_payload = {
