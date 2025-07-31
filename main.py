@@ -67,6 +67,7 @@ async def handle_messages(request: Request):
                             "file_urls": [],
                             "callback_type": "messenger"
                         }
+                        
                         try:
                             dx_response = requests.post(
                                 DX_API_SEND_MESSAGE,
@@ -75,25 +76,25 @@ async def handle_messages(request: Request):
                             )
                             dx_response.raise_for_status()
                             logger.info(f"Sent message to DX API: {dx_response.status_code}")
-                        except requests.RequestException as e:
-                            logger.error(f"Failed to send message to DX API: {e}")
 
-                    # 2. Auto-reply to user if message is "hello"
-                    if message_text and message_text.lower() == "hello":
-                        send_payload = {
-                            "recipient": {"id": sender_id},
-                            "message": {"text": "How may I help you?"},  # cleaned text
-                        }
-                        headers = {
-                            "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}",
-                            "Content-Type": "application/json"
-                        }
+                            ai_data = dx_response.json()
+                            ai_response = ai_data.get("ai_response")
+                            
+                            send_payload = {
+                                "recipient": {"id": sender_id},
+                                "message": {"text": ai_response},
+                            }
 
-                        try:
+                            headers = {
+                                "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}",
+                                "Content-Type": "application/json"
+                            }
+                            
                             response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
                             response.raise_for_status()
-                            logger.info(f"Sent reply to {sender_id}")
-                        except requests.RequestException as e:
-                            logger.error(f"Error sending message: {e}")
+                            logger.info(f"Sent AI reply to {sender_id}")
 
+                        except requests.RequestException as e:
+                            logger.error(f"FAILED TO SEND OR RESPOND WITH AI MESSAGE: {e}")
+                            
     return {"status": "ok"}
