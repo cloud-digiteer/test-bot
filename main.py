@@ -3,8 +3,9 @@ from fastapi.responses import PlainTextResponse
 import os
 from dotenv import load_dotenv
 import requests
-import logging 
+import logging
 
+# Load environment variables
 load_dotenv()
 
 app = FastAPI()
@@ -14,9 +15,12 @@ PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
 DX_API_SEND_MESSAGE = os.getenv("DX_API_SEND_MESSAGE")
 
 FB_MESSENGER_API = "https://graph.facebook.com/v18.0/me/messages"
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
+# Temporary in-memory map (for development only)
+sender_map = {}  # key: chat_id (or task_id), value: sender_id
 
 @app.get("/")
 def root():
@@ -34,17 +38,6 @@ async def verify(request: Request):
         return PlainTextResponse(content=challenge, status_code=200)
     else:
         return PlainTextResponse("Forbidden", status_code=403)
-    
-@app.post("/dx-result")
-async def receive_dx_result(request: Request):
-    try:
-        data = await request.json()
-        logger.info(f"[DX RESULT] Received: {data}")
-        return {"status": "received"}
-    
-    except Exception as e:
-        logger.error(f"ERROR PROCESSING RECEIVING DX RESULT")
-        return {"status": "error", "message": str(e)}
 
 @app.post("/webhook")
 async def handle_messages(request: Request):
@@ -57,9 +50,11 @@ async def handle_messages(request: Request):
                     message_text = messaging_event["message"].get("text")
                     logger.info(f"Message from {sender_id}: {message_text}")
 
-                    # 1. Send message_text to DX_API_SEND_MESSAGE
                     if message_text:
-                        
+                        # Store sender_id for callback
+                          # Replace with dynamic chat_id or task_id if needed
+
+                        # Send message to DX API
                         dx_payload = {
                             "chat_id": 1,
                             "user_message": message_text,
@@ -67,7 +62,6 @@ async def handle_messages(request: Request):
                             "file_urls": [],
                             "callback_type": "messenger"
                         }
-                        
                         try:
                             dx_response = requests.post(
                                 DX_API_SEND_MESSAGE,
@@ -76,26 +70,40 @@ async def handle_messages(request: Request):
                             )
                             dx_response.raise_for_status()
                             logger.info(f"Sent message to DX API: {dx_response.status_code}")
-
-                            ai_data = dx_response.json()
-                            logger.info(f"AI DATA: {ai_data}")
-                            ai_response = ai_data.get("ai_response")
-                            
-                            send_payload = {
-                                "recipient": {"id": sender_id},
-                                "message": {"text": ai_response},
-                            }
-
-                            headers = {
-                                "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}",
-                                "Content-Type": "application/json"
-                            }
-                            
-                            response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
-                            response.raise_for_status()
-                            logger.info(f"Sent AI reply to {sender_id}")
-
                         except requests.RequestException as e:
-                            logger.error(f"FAILED TO SEND OR RESPOND WITH AI MESSAGE: {e}")
-                            
+                            logger.error(f"Failed to send message to DX API: {e}")
+
     return {"status": "ok"}
+
+@app.post("/dx-result")
+async def receive_dx_result(request: Request):
+    try:
+        data = await request.json()
+        logger.info(f"[DX RESULT] Received: {data}")
+
+        ai_response = data.get("ai_response")
+        chat_id = data.get("chat_id")
+
+        sender_id = sender_map.get(chat_id)
+
+        if sender_id and ai_response:
+            send_payload = {
+                "recipient": {"id": sender_id},
+                "message": {"text": ai_response},
+            }
+            headers = {
+                "Authorization": f"Bearer {PAGE_ACCESS_TOKEN}",
+                "Content-Type": "application/json"
+            }
+
+            response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
+            response.raise_for_status()
+            logger.info(f"Sent AI reply to {sender_id}")
+        else:
+            logger.warning(f"Sender ID not found for chat_id: {chat_id} or missing ai_response")
+
+        return {"status": "received"}
+
+    except Exception as e:
+        logger.error(f"ERROR PROCESSING RECEIVING DX RESULT: {e}")
+        return {"status": "error", "message": str(e)}
