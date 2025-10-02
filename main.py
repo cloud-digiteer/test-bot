@@ -14,7 +14,7 @@ VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN", "myverifytoken")
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
 DX_API_SEND_MESSAGE = os.getenv("DX_API_SEND_MESSAGE")
 
-FB_MESSENGER_API = "https://graph.facebook.com/v18.0/me/messages"
+FB_MESSENGER_API = "https://graph.facebook.com/v21.0/me/messages"
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -26,7 +26,6 @@ sender_map = {}  # key: chat_id (or task_id), value: sender_id
 def root():
     return {"status": "Running"}
 
-@app.get("/webhook")
 async def verify(request: Request):
     params = dict(request.query_params)
     mode = params.get("hub.mode")
@@ -50,7 +49,7 @@ async def handle_messages(request: Request):
                     message_text = messaging_event["message"].get("text")
                     logger.info(f"Message from {sender_id}: {message_text}")
 
-                    if message_text:
+                    if message_text: 
                         # Store sender_id for callback
                         sender_map[1] = sender_id  # Replace with dynamic chat_id or task_id if needed
 
@@ -59,7 +58,7 @@ async def handle_messages(request: Request):
                             "chat_id": 1,
                             "user_message": message_text,
                             "file_ids": [],
-                            "file_urls": [],
+                            "file_u rls": [],
                             "callback_type": "messenger"
                         }
                         try:
