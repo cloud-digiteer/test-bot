@@ -4,7 +4,6 @@ import os
 from dotenv import load_dotenv
 import requests
 import logging
-import uuid
 
 # Load environment variables
 load_dotenv()
@@ -21,12 +20,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # Temporary in-memory map (for development only)
-sender_map = {}  # key: chat_id (or task_id), value: sender_id
+sender_map = {}  # key: chat_id, value: sender_id
 
 @app.get("/")
 def root():
     return {"status": "Running"}
 
+@app.get("/verify")
 async def verify(request: Request):
     params = dict(request.query_params)
     mode = params.get("hub.mode")
@@ -50,13 +50,14 @@ async def handle_messages(request: Request):
                     message_text = messaging_event["message"].get("text")
                     logger.info(f"Message from {sender_id}: {message_text}")
 
-                    if message_text: 
-                        # Store sender_id for callback
-                        sender_map[1] = sender_id 
+                    if message_text:
+                        chat_id = sender_id
+                        sender_map[chat_id] = sender_id
+                        logger.info(f"Updated sender_map: {sender_map}")
 
                         # Send message to DX API
                         dx_payload = {
-                            "chat_id": sender_id,  # <- dynamic now
+                            "chat_id": chat_id,  # dynamic now
                             "user_message": message_text,
                             "file_ids": [
                                 "fdb6b0e8-6091-42e9-b2de-aeb535d0026b",
@@ -99,12 +100,10 @@ async def receive_dx_result(request: Request):
                 "Content-Type": "application/json"
             }
 
-            logger.info("Before sending AI reply")
-            logger.info(f"Payload to Facebook Messenger: {send_payload}")
+            logger.info(f"Sending AI reply to {sender_id}: {ai_response}")
             response = requests.post(FB_MESSENGER_API, headers=headers, json=send_payload)
             response.raise_for_status()
-            logger.info(f"Sent AI reply to {sender_id}")
-            logger.info("After sending AI reply")
+            logger.info(f"Sent AI reply successfully to {sender_id}")
 
         else:
             logger.warning(f"Sender ID not found for chat_id: {chat_id} or missing ai_response")
