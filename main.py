@@ -52,13 +52,16 @@ async def handle_messages(request: Request):
 
                     if message_text: 
                         # Store sender_id for callback
-                        sender_map[1] = sender_id  # Replace with dynamic chat_id or task_id if needed
+                        sender_map[1] = sender_id 
 
                         # Send message to DX API
                         dx_payload = {
-                            "chat_id": 1,
+                            "chat_id": sender_id,  # <- dynamic now
                             "user_message": message_text,
-                            "file_ids": ["fdb6b0e8-6091-42e9-b2de-aeb535d0026b", "723cd06a-d51d-4638-acd2-6efc7b024987"],
+                            "file_ids": [
+                                "fdb6b0e8-6091-42e9-b2de-aeb535d0026b",
+                                "723cd06a-d51d-4638-acd2-6efc7b024987"
+                            ],
                             "file_urls": [],
                             "callback_type": "messenger"
                         }
