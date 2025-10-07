@@ -4,6 +4,9 @@ import os
 from dotenv import load_dotenv
 import requests
 import logging
+import asyncio
+import time
+from contextlib import asynccontextmanager
 
 # Load environment variables
 load_dotenv()
@@ -19,12 +22,43 @@ FB_MESSENGER_API = "https://graph.facebook.com/v21.0/me/messages"
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-# Temporary in-memory map (for development only)
-sender_map = {}  # key: chat_id, value: sender_id
+# Store sender_id and timestamp
+# sender_map = {chat_id: {"sender_id": <id>, "last_active": <timestamp>}}
+sender_map = {}
+SESSION_TIMEOUT = 300  # 5 minutes (in seconds)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Handles startup and shutdown tasks."""
+    async def cleanup_sessions():
+        while True:
+            now = time.time()
+            expired = [
+                chat_id for chat_id, info in sender_map.items()
+                if now - info["last_active"] > SESSION_TIMEOUT
+            ]
+            for chat_id in expired:
+                logger.info(f"[SESSION EXPIRED] Removing chat_id: {chat_id}")
+                sender_map.pop(chat_id, None)
+            await asyncio.sleep(60)
+
+    # Startup
+    cleanup_task = asyncio.create_task(cleanup_sessions())
+    logger.info("🟢 Session cleanup task started.")
+
+    # Yield control back to FastAPI runtime
+    yield
+
+    # Shutdown
+    cleanup_task.cancel()
+    logger.info("🔴 Session cleanup task stopped.")
+
 
 @app.get("/")
 def root():
     return {"status": "Running"}
+
 
 @app.get("/verify")
 async def verify(request: Request):
@@ -39,6 +73,7 @@ async def verify(request: Request):
     else:
         return PlainTextResponse("Forbidden", status_code=403)
 
+
 @app.post("/webhook")
 async def handle_messages(request: Request):
     body = await request.json()
@@ -52,12 +87,14 @@ async def handle_messages(request: Request):
 
                     if message_text:
                         chat_id = sender_id
-                        sender_map[chat_id] = sender_id
+                        sender_map[chat_id] = {
+                            "sender_id": sender_id,
+                            "last_active": time.time()
+                        }
                         logger.info(f"Updated sender_map: {sender_map}")
 
-                        # Send message to DX API
                         dx_payload = {
-                            "chat_id": chat_id,  # dynamic now
+                            "chat_id": chat_id,
                             "user_message": message_text,
                             "file_ids": [
                                 "fdb6b0e8-6091-42e9-b2de-aeb535d0026b",
@@ -66,6 +103,7 @@ async def handle_messages(request: Request):
                             "file_urls": [],
                             "callback_type": "messenger"
                         }
+
                         try:
                             dx_response = requests.post(
                                 DX_API_SEND_MESSAGE,
@@ -79,6 +117,7 @@ async def handle_messages(request: Request):
 
     return {"status": "ok"}
 
+
 @app.post("/dx-result")
 async def receive_dx_result(request: Request):
     try:
@@ -88,7 +127,8 @@ async def receive_dx_result(request: Request):
         ai_response = data.get("ai_response")
         chat_id = data.get("chat_id")
 
-        sender_id = sender_map.get(chat_id)
+        sender_info = sender_map.get(chat_id)
+        sender_id = sender_info["sender_id"] if sender_info else None
 
         if sender_id and ai_response:
             send_payload = {
@@ -106,7 +146,7 @@ async def receive_dx_result(request: Request):
             logger.info(f"Sent AI reply successfully to {sender_id}")
 
         else:
-            logger.warning(f"Sender ID not found for chat_id: {chat_id} or missing ai_response")
+            logger.warning(f"Sender ID not found or session expired for chat_id: {chat_id}")
 
         return {"status": "received"}
 
