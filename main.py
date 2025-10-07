@@ -25,13 +25,14 @@ logger = logging.getLogger(__name__)
 # Store sender_id and timestamp
 # sender_map = {chat_id: {"sender_id": <id>, "last_active": <timestamp>}}
 sender_map = {}
-SESSION_TIMEOUT = 300  # 5 minutes (in seconds)
+SESSION_TIMEOUT = 10  # 10 seconds for testing
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handles startup and shutdown tasks."""
     async def cleanup_sessions():
+        logger.info("[CLEANUP TASK] Checking for expired sessions...")
         while True:
             now = time.time()
             expired = [
@@ -41,7 +42,7 @@ async def lifespan(app: FastAPI):
             for chat_id in expired:
                 logger.info(f"[SESSION EXPIRED] Removing chat_id: {chat_id}")
                 sender_map.pop(chat_id, None)
-            await asyncio.sleep(60)
+            await asyncio.sleep(5)
 
     # Startup
     cleanup_task = asyncio.create_task(cleanup_sessions())
