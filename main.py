@@ -11,8 +11,6 @@ from contextlib import asynccontextmanager
 # Load environment variables
 load_dotenv()
 
-app = FastAPI()
-
 VERIFY_TOKEN = os.getenv("FB_VERIFY_TOKEN", "myverifytoken")
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN")
 DX_API_SEND_MESSAGE = os.getenv("DX_API_SEND_MESSAGE")
@@ -48,12 +46,15 @@ async def lifespan(app: FastAPI):
     cleanup_task = asyncio.create_task(cleanup_sessions())
     logger.info("🟢 Session cleanup task started.")
 
-    # Yield control back to FastAPI runtime
-    yield
+    yield  # App runs here
 
     # Shutdown
     cleanup_task.cancel()
     logger.info("🔴 Session cleanup task stopped.")
+
+
+# ✅ Attach lifespan to FastAPI
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
