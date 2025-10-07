@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Store sender_id and timestamp
 # sender_map = {chat_id: {"sender_id": <id>, "last_active": <timestamp>}}
 sender_map = {}
-SESSION_TIMEOUT = 10  # 10 seconds for testing
+SESSION_TIMEOUT = 300  
 
 
 @asynccontextmanager
