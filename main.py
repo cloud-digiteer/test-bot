@@ -99,7 +99,7 @@ async def handle_messages(request: Request):
                             "chat_id": chat_id,
                             "user_message": message_text,
                             "file_ids": [
-                                "3f5a8ae9-a658-4b25-8a7e-ec1af7d11811"
+                                "976f070e-a888-4920-bc0f-f35b0a061ac1"
                             ],
                             "file_urls": [],
                             "callback_type": "messenger"
