@@ -98,9 +98,7 @@ async def handle_messages(request: Request):
                         dx_payload = {
                             "chat_id": chat_id,
                             "user_message": message_text,
-                            "file_ids": [
-                                "49ce529b-d471-40fe-8be7-367f919b807c"
-                            ],
+                            "file_ids": ["8003d11f-2a9e-482a-baaf-4b79bf6bd65c", "1c799846-ef6d-4bee-ade9-bd0cc3a24421", "0dfd1beb-1ed1-4645-9250-9b2b18340099", "c0961845-6c67-4616-a414-909d27c37daa"],
                             "file_urls": [],
                             "callback_type": "messenger"
                         }
